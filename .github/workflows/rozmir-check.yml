@@ -1,0 +1,66 @@
+name: Rozmir checker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: rozmir-checker
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements_github_worker.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/contabo_ed25519
+          chmod 600 ~/.ssh/contabo_ed25519
+          ssh-keyscan -p "${{ secrets.CONTABO_SSH_PORT }}" "${{ secrets.CONTABO_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Open SSH tunnel
+        env:
+          SSH_HOST: ${{ secrets.CONTABO_SSH_HOST }}
+          SSH_PORT: ${{ secrets.CONTABO_SSH_PORT }}
+          SSH_USER: ${{ secrets.CONTABO_SSH_USER }}
+        run: |
+          ssh -N -f \
+            -i ~/.ssh/contabo_ed25519 \
+            -p "$SSH_PORT" \
+            -o IdentitiesOnly=yes \
+            -o ExitOnForwardFailure=yes \
+            -o ServerAliveInterval=30 \
+            -L 8877:127.0.0.1:8877 \
+            "$SSH_USER@$SSH_HOST"
+
+      - name: Check H&M / ZARA
+        env:
+          SERVER_URL: http://127.0.0.1:8877
+          WORKER_API_KEY: ${{ secrets.WORKER_API_KEY }}
+          REQUEST_TIMEOUT: "30"
+          DELAY_BETWEEN_ITEMS: "1"
+          PLAYWRIGHT_HEADLESS: "true"
+          LOG_LEVEL: INFO
+        run: |
+          python rozmir_github_worker.py
