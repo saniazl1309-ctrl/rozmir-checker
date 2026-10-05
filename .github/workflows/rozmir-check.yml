@@ -29,17 +29,27 @@ jobs:
           python -m pip install -r requirements_github_worker.txt
           python -m playwright install --with-deps chromium
 
-      - name: Prepare SSH key
+            - name: Prepare SSH key
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_B64: ${{ secrets.CONTABO_SSH_PRIVATE_KEY_B64 }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/contabo_ed25519
-          chmod 600 ~/.ssh/contabo_ed25519
-          ssh-keyscan -p "${{ secrets.CONTABO_SSH_PORT }}" "${{ secrets.CONTABO_SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Open SSH tunnel
+          printf '%s' "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/contabo_ed25519
+          chmod 600 ~/.ssh/contabo_ed25519
+
+          echo "Checking SSH private key..."
+          ssh-keygen -y -f ~/.ssh/contabo_ed25519 >/dev/null
+
+          ssh-keyscan \
+            -p "${{ secrets.CONTABO_SSH_PORT }}" \
+            "${{ secrets.CONTABO_SSH_HOST }}" \
+            >> ~/.ssh/known_hosts
+
+          chmod 600 ~/.ssh/known_hoststs
+
+            - name: Open SSH tunnel
         env:
           SSH_HOST: ${{ secrets.CONTABO_SSH_HOST }}
           SSH_PORT: ${{ secrets.CONTABO_SSH_PORT }}
