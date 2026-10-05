@@ -29,7 +29,7 @@ jobs:
           python -m pip install -r requirements_github_worker.txt
           python -m playwright install --with-deps chromium
 
-            - name: Prepare SSH key
+      - name: Prepare SSH key
         env:
           SSH_PRIVATE_KEY_B64: ${{ secrets.CONTABO_SSH_PRIVATE_KEY_B64 }}
         run: |
@@ -47,9 +47,9 @@ jobs:
             "${{ secrets.CONTABO_SSH_HOST }}" \
             >> ~/.ssh/known_hosts
 
-          chmod 600 ~/.ssh/known_hoststs
+          chmod 600 ~/.ssh/known_hosts
 
-            - name: Open SSH tunnel
+      - name: Open SSH tunnel
         env:
           SSH_HOST: ${{ secrets.CONTABO_SSH_HOST }}
           SSH_PORT: ${{ secrets.CONTABO_SSH_PORT }}
