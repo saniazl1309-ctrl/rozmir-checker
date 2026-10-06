@@ -1,0 +1,33 @@
+name: ZARA API test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-zara:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test ZARA availability API
+        shell: bash
+        run: |
+          set -e
+
+          URL='https://www.zara.com/api/storefront/1/stores/11725/products/id/583480224/availability'
+
+          echo "Testing:"
+          echo "$URL"
+          echo
+
+          curl -sS --compressed \
+            --connect-timeout 15 \
+            --max-time 30 \
+            -H 'Accept: application/json' \
+            -o /tmp/zara.json \
+            -w 'HTTP=%{http_code}\nREMOTE_IP=%{remote_ip}\nSIZE=%{size_download}\n' \
+            "$URL"
+
+          echo
+          echo '===== RESPONSE ====='
+          head -c 5000 /tmp/zara.json
+          echo
